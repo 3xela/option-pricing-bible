@@ -23,6 +23,6 @@ double monte_carlo_bs_call(double initial_stock, double strike_price,double vola
 
 
 int main(){
-    std::cout << monte_carlo_bs_call(60, 65, 0.3 ,0.25*days_in_a_year, 0.08 , 100000000) << std::endl;
+    std::cout << monte_carlo_bs_call(60, 65, 0.3 ,0.25*days_in_a_year, 0.08 , 10000000) << std::endl;
     return 0;
 }
