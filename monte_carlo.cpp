@@ -22,6 +22,18 @@ double monte_carlo_bs_call(double initial_stock, double strike_price,double vola
     return std::exp(-risk_free*maturity/days_in_a_year)*sum/sample_count;
 }
 
+double monte_carlo_bs_put(double initial_stock, double strike_price,double volatility, double maturity, double risk_free, int sample_count){
+    double sum = 0.0;
+    double sample = distribution(gen);
+    for (int i=0; i<sample_count; i++)
+    {
+        double final_stock_price = initial_stock*std::exp( (risk_free  - std::pow(volatility, 2)/ 2)*maturity/days_in_a_year  + volatility*sample*std::sqrt(maturity/days_in_a_year)  );
+        sum += std::max(strike_price - final_stock_price, 0.0);
+    }
+    return std::exp(-risk_free*maturity/days_in_a_year)*sum/sample_count;
+}
+
+
 std::vector<std::vector<double>> monte_carlo_array_generator(int number_arrays, int array_length, double drift, double volatility, double initial_stock){
 	// rescale the constants for the appropriate time intervals
 	double daily_drift = drift/days_in_a_year;
@@ -47,25 +59,21 @@ std::vector<std::vector<double>> monte_carlo_array_generator(int number_arrays, 
 	return price_paths;
 }
 
-double monte_carlo_bs_put(double initial_stock, double strike_price,double volatility, double maturity, double risk_free, int sample_count){
-    double sum = 0.0;
-    double sample = distribution(gen);
-    for (int i=0; i<sample_count; i++)
-    {
-        double final_stock_price = initial_stock*std::exp( (risk_free  - std::pow(volatility, 2)/ 2)*maturity/days_in_a_year  + volatility*sample*std::sqrt(maturity/days_in_a_year)  );
-        sum += std::max(strike_price - final_stock_price, 0.0);
-    }
-    return std::exp(-risk_free*maturity/days_in_a_year)*sum/sample_count;
-}
-
-
-
-double call_barrier_monte_carlo(char knock_flag, char direction_flag , double initial_stock, double knockout_price, double volatility, double maturity, double risk_free, int sample_count){
+double call_barrier_monte_carlo(char knock_flag, char direction_flag , double initial_stock, double knockout_price, double strike_price ,double volatility, int  maturity, double risk_free, int sample_count){
 // knock_flag takes in "i" or "o" as char. determines if it is knock IN or OUT.
 // direction_flag takes in "u" or "d" as char. determines if it is UP or DOWN,
+	std::vector<std::vector<double>>  simulation_data = monte_carlo_array_generator(sample_count, maturity, risk_free, volatility, initial_stock );	
+	double payoff = 0;
+// first do up and out
+if (knock_flag == 'o' && direction_flag == 'u'){
+for(int i=0; i<sample_count; i++){
+if (std::max_element(simulation_data[i].begin(), simulation_data[i].end()) < knockout_price){
+		payoff += std::max(simulation_data[i][maturity-1] - strike_price, 0.0);
+		}
 
-
-	return 0;
+}
+}
+return 0;
 }
 
 int main(){
@@ -78,5 +86,6 @@ int main(){
     }	
     std::cout << std::endl;
     }
+    std::cout<< "hi"<< std::endl;
     return 0;
 }
