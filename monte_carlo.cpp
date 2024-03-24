@@ -58,7 +58,6 @@ std::vector<std::vector<double>> monte_carlo_array_generator(int number_arrays, 
 	}	
 	return price_paths;
 }
-
 double call_barrier_monte_carlo(char knock_flag, char direction_flag , double initial_stock, double knockout_price, double strike_price ,double volatility, int  maturity, double risk_free, int sample_count){
 // knock_flag takes in "i" or "o" as char. determines if it is knock IN or OUT.
 // direction_flag takes in "u" or "d" as char. determines if it is UP or DOWN,
@@ -67,7 +66,8 @@ double call_barrier_monte_carlo(char knock_flag, char direction_flag , double in
 // first do up and out
 if (knock_flag == 'o' && direction_flag == 'u'){
 for(int i=0; i<sample_count; i++){
-if (std::max_element(simulation_data[i].begin(), simulation_data[i].end()) < knockout_price){
+	double max_price = *std::max_element(simulation_data[i].begin(),simulation_data[i].end());
+	if (max_price < knockout_price){
 		payoff += std::max(simulation_data[i][maturity-1] - strike_price, 0.0);
 		}
 
@@ -75,17 +75,16 @@ if (std::max_element(simulation_data[i].begin(), simulation_data[i].end()) < kno
 }
 return 0;
 }
-
 int main(){
     //std::cout << monte_carlo_bs_call(60, 65, 0.3 ,0.25*days_in_a_year, 0.08 , 10000001) << std::endl;
     //std::cout << monte_carlo_bs_put(60, 65, 0.3 ,0.25*days_in_a_year, 0.08 , 10000001) << std::endl;
     std::vector<std::vector<double>> paths = monte_carlo_array_generator(10, 10, 0.05, 0.30,60 );
-    for (const auto& pathway : paths){
-    for (double price : pathway){
-	    std::cout << price << " ";
-    }	
+    for (int i=0; i< paths.size(); i++){
+	    std::cout << "Path " << i+1 << ": ";
+    for (int j = 0; j<paths[i].size(); j++){
+	    std::cout << paths[i][j] << " ";
+    }	    
     std::cout << std::endl;
     }
-    std::cout<< "hi"<< std::endl;
     return 0;
 }
