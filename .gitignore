@@ -23,4 +23,4 @@
 *.app
 
 #ignore the folder where compiled files are stored
-/bin
+/build
