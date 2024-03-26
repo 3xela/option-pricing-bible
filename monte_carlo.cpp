@@ -59,24 +59,28 @@ std::vector<std::vector<double>> monte_carlo_array_generator(int number_arrays, 
 	}	
 	return price_paths;
 }
+
+double option_payoff(double stock_price, double strike_price){
+	return std::max(stock_price)
+}
+
 double call_barrier_monte_carlo(char knock_flag, char direction_flag , double initial_stock, double barrier_price, double strike_price ,double volatility, int  maturity, double risk_free, int sample_count){
 // knock_flag takes in "i" or "o" as char. determines if it is knock IN or OUT.
 // direction_flag takes in "u" or "d" as char. determines if it is UP or DOWN,
 std::vector<std::vector<double>>  simulation_data = monte_carlo_array_generator(sample_count, maturity, risk_free, volatility, initial_stock );	
 double payoff = 0;
-// first do up and out
-if (knock_flag == 'o' && direction_flag == 'u'){
-for(int i=0; i<sample_count; i++){
-	double max_price = *std::max_element(simulation_data[i].begin(),simulation_data[i].end());
-	if (max_price < barrier_price){
-		payoff += std::max(simulation_data[i][maturity-1] - strike_price, 0.0);
-		}
-	}
-}
 if (knock_flag == 'i' && direction_flag == 'u'){
 for(int i=0; i<sample_count; i++){
 	double max_price = *std::max_element(simulation_data[i].begin(),simulation_data[i].end());
 	if (max_price > barrier_price){
+		payoff += std::max(simulation_data[i][maturity-1] - strike_price, 0.0);
+		}
+	}
+}
+if (knock_flag == 'i' && direction_flag == 'd'){
+for(int i=0; i<sample_count; i++){
+	double max_price = *std::max_element(simulation_data[i].begin(),simulation_data[i].end());
+	if (max_price < barrier_price){
 		payoff += std::max(simulation_data[i][maturity-1] - strike_price, 0.0);
 		}
 	}
@@ -86,7 +90,7 @@ return payoff/sample_count * std::exp(-risk_free * maturity/real_days_in_a_year)
 int main(){
     //std::cout << monte_carlo_bs_call(60, 65, 0.3 ,0.25*days_in_a_year, 0.08 , 10000001) << std::endl;
     //std::cout << monte_carlo_bs_put(60, 65, 0.3 ,0.25*days_in_a_year, 0.08 , 10000001) << std::endl;
-    std::vector<std::vector<double>> paths = monte_carlo_array_generator(10, 10, 0.05, 0.30,60 );
+    std::vector<std::vector<double>> paths = monte_carlo_array_generator(10, 10, 0.08, 0.30,60 );
     for (int i=0; i< paths.size(); i++){
 	    std::cout << "Path " << i+1 << ": ";
     for (int j = 0; j<paths[i].size(); j++){
@@ -94,7 +98,9 @@ int main(){
     }	    
     std::cout << std::endl;
     }
-    double  output = call_barrier_monte_carlo('o', 'u', 60, 70, 50, 0.3, 365, 0.08, 1000000);
-    std::cout << output << std::endl;
+    double  output_in_and_up = call_barrier_monte_carlo('i', 'u', 60, 70, 50, 0.3, 365, 0.08, 10000);
+    std::cout << output_in_and_up << std::endl;
+     double  output_in_and_down = call_barrier_monte_carlo('i', 'd', 60, 70, 50, 0.3, 365, 0.08, 10000);
+    std::cout << output_in_and_down << std::endl;
     return 0;
 }
