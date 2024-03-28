@@ -107,9 +107,17 @@ return payoff/sample_count * std::exp(-risk_free * maturity/(volatility_days_in_
 }
 
 class Stock_Monte_Carlo{
-Stock_Monte_Carlo(int number_arrays, int array_length, double drift, double volatility, double initial_stock, int refinement){}
+	private:
+	int number_arrays;
+	int array_length;
+	double drift;
+	double volatility;
+	double initial_stock;
+	int refinement;
+	public:
+Stock_Monte_Carlo(int number_arrays, int array_length, double drift, double volatility, double initial_stock, int refinement): number_arrays(number_arrays), array_length(array_length), drift(drift), volatility(volatility), initial_stock(initial_stock), refinement(refinement) {}
 
-std::vector<std::vector<double>> monte_carlo_array_generator(int number_arrays, int array_length, double drift, double volatility, double initial_stock, int refinement){
+std::vector<std::vector<double>> monte_carlo_array_generator(){
 	// rescale the constants for the appropriate time intervals
 	double daily_drift = drift/(real_days_in_a_year*refinement);
 	double daily_volatility = volatility/std::sqrt(volatility_days_in_a_year*refinement);
@@ -144,8 +152,9 @@ protected:
 	double volatility;
 	double strike_price;
 	int maturity;
+	double risk_free;
 public:
-	Vanilla_Option(char flag , double initial_stock, double volatility, double strike, int days ) : call_put_flag(flag), volatility(volatility), strike_price(strike), maturity(days){
+	Vanilla_Option(char flag , double initial_stock, double volatility,double risk_free ,double strike, int days ) : call_put_flag(flag), volatility(volatility), strike_price(strike),risk_free(risk_free) , maturity(days){
 	if (call_put_flag != 'c' && call_put_flag != 'p'){
 	throw std::invalid_argument("Invalid Call or Put Flag. Input must be character c or p");
 	}
@@ -168,8 +177,8 @@ private:
 		char knock_flag;
 		char direction_flag;
 public:	
-	Barrier_Option(char cp_flag, char inoutflag, char updownflag, double volatility, double strike , double days, double barrier, double initial_stock) : Vanilla_Option(cp_flag,initial_stock,volatility, strike , days ) , barrier_price(barrier), knock_flag(inoutflag), direction_flag(updownflag)  {	
-if (knock_flag != 'o' && call_put_flag != 'i'){
+	Barrier_Option(char cp_flag, char inoutflag, char updownflag, double volatility, double strike , int days, double barrier, double initial_stock, double risk_free) : Vanilla_Option(cp_flag,initial_stock,volatility,risk_free ,strike , days ) , barrier_price(barrier), knock_flag(inoutflag), direction_flag(updownflag)  {	
+if (knock_flag != 'o' && knock_flag != 'i'){
 	throw std::invalid_argument("Invalid Knock Flag. Input must be character o or i");
 	}
 if (direction_flag != 'u' && direction_flag != 'd'){
@@ -210,7 +219,7 @@ double barrier_monte_carlo(std::vector<std::vector<double>> paths){
 			double min_price = *std::min_element(paths[i].begin(), paths[i].end());
 			payoff +=barrier_payoff(paths[i][total_steps-1], max_price, min_price );
 		}
-	return payoff;
+	return payoff/(paths.size())*std::exp(-risk_free *maturity/(real_days_in_a_year) );
 	}
 };
 
@@ -233,7 +242,11 @@ int refinement = 8;
     }	    
     std::cout << std::endl;
     }*/
-Stock_Monte_Carlo data();
+Stock_Monte_Carlo data(number_samples, days, real_rate, volatility, initial_stock, refinement);
+
+Barrier_Option call_barrier_1('c', 'i','u', volatility, strike, days, barrier, initial_stock, real_rate );
+std::cout << call_barrier_1.barrier_monte_carlo(data.monte_carlo_array_generator()) << std::endl;
+
     double  output_in_and_up = call_barrier_monte_carlo('i', 'u', initial_stock, 70, 50, 0.3, days, 0.08, number_samples, refinement);
     std::cout << "up and in call " << output_in_and_up << std::endl;
      double  output_in_and_down = call_barrier_monte_carlo('i', 'd', initial_stock, 70, 50, 0.3, days, 0.08, number_samples, refinement);
