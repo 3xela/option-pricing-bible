@@ -35,72 +35,212 @@ double monte_carlo_bs_put(double initial_stock, double strike_price,double volat
 }
 
 
-std::vector<std::vector<double>> monte_carlo_array_generator(int number_arrays, int array_length, double drift, double volatility, double initial_stock){
+std::vector<std::vector<double>> monte_carlo_array_generator(int number_arrays, int array_length, double drift, double volatility, double initial_stock, int refinement){
 	// rescale the constants for the appropriate time intervals
-	double daily_drift = drift/real_days_in_a_year;
-	double daily_volatility = volatility/std::sqrt(volatility_days_in_a_year);
+	double daily_drift = drift/(real_days_in_a_year*refinement);
+	double daily_volatility = volatility/std::sqrt(volatility_days_in_a_year*refinement);
 	// initialize dummy variables
 	double next_price = 0;
 	std::vector<std::vector<double>> price_paths;
 	std::vector<double> pathway;
 
-	for (int i = 0; i<number_arrays; i++){
-		pathway.push_back(initial_stock);
-		for (int j = 1; j< array_length; j++){
-		// take random sample	
-		double	sample = distribution(gen);	
-		next_price = pathway[j-1];
-		next_price = next_price*std::exp( (daily_drift - std::pow(daily_volatility,2)/2) + daily_volatility*sample);
-		pathway.push_back(next_price);
+for (int i = 0; i<number_arrays; i++){
+	pathway.push_back(initial_stock);
+	for (int j = 1; j< array_length*refinement; j++){
+	// take random sample	
+	double	sample = distribution(gen);	
+	next_price = pathway[j-1];
+	next_price = next_price*std::exp( (daily_drift - std::pow(daily_volatility,2)/2) + daily_volatility*sample);
+	pathway.push_back(next_price);
 		
-		}
-		price_paths.push_back(pathway);
-		pathway.clear();
+	}
+price_paths.push_back(pathway);
+pathway.clear();
 	}	
-	return price_paths;
+return price_paths;
 }
 
-double option_payoff(double stock_price, double strike_price){
-	return std::max(stock_price)
+double call_option_payoff(double stock_price, double strike_price){
+	return std::max(stock_price - strike_price , 0.0);
 }
 
-double call_barrier_monte_carlo(char knock_flag, char direction_flag , double initial_stock, double barrier_price, double strike_price ,double volatility, int  maturity, double risk_free, int sample_count){
+double barrier_payoff(char knock_flag, char direction_flag, double barrier_price, double maturity_price , double strike_price, double max_price, double min_price){
+if (knock_flag == 'i'){
+	if (direction_flag == 'u' && max_price < barrier_price){
+	return 0; 
+	}
+	else if (direction_flag == 'd' && min_price > barrier_price){
+	return 0;
+	}
+	else{
+	return call_option_payoff(maturity_price, strike_price);
+	}
+}
+else if (knock_flag == 'o'){
+	if (direction_flag == 'u' && max_price < barrier_price){
+	return call_option_payoff(maturity_price, strike_price);
+	}
+	else if (direction_flag == 'd' && min_price > barrier_price ){
+	return call_option_payoff(maturity_price, strike_price);
+	}
+	else {
+	return 0;
+}
+}
+return 0;
+}
+
+
+double call_barrier_monte_carlo(char knock_flag, char direction_flag , double initial_stock, double barrier_price, double strike_price ,double volatility, int  maturity, double risk_free, int sample_count, int refinement){
 // knock_flag takes in "i" or "o" as char. determines if it is knock IN or OUT.
 // direction_flag takes in "u" or "d" as char. determines if it is UP or DOWN,
-std::vector<std::vector<double>>  simulation_data = monte_carlo_array_generator(sample_count, maturity, risk_free, volatility, initial_stock );	
+std::vector<std::vector<double>>  simulation_data = monte_carlo_array_generator(sample_count, maturity, risk_free, volatility, initial_stock , refinement);	
 double payoff = 0;
-if (knock_flag == 'i' && direction_flag == 'u'){
+
 for(int i=0; i<sample_count; i++){
-	double max_price = *std::max_element(simulation_data[i].begin(),simulation_data[i].end());
-	if (max_price > barrier_price){
-		payoff += std::max(simulation_data[i][maturity-1] - strike_price, 0.0);
-		}
+double max_price = *std::max_element(simulation_data[i].begin(), simulation_data[i].end());
+double min_price = *std::min_element(simulation_data[i].begin(), simulation_data[i].end());
+double maturity_price = simulation_data[i][maturity*refinement-1];
+	payoff += barrier_payoff(knock_flag, direction_flag, barrier_price, maturity_price, strike_price, max_price, min_price);
+}
+return payoff/sample_count * std::exp(-risk_free * maturity/(volatility_days_in_a_year));
+}
+
+class Stock_Monte_Carlo{
+Stock_Monte_Carlo(int number_arrays, int array_length, double drift, double volatility, double initial_stock, int refinement){}
+
+std::vector<std::vector<double>> monte_carlo_array_generator(int number_arrays, int array_length, double drift, double volatility, double initial_stock, int refinement){
+	// rescale the constants for the appropriate time intervals
+	double daily_drift = drift/(real_days_in_a_year*refinement);
+	double daily_volatility = volatility/std::sqrt(volatility_days_in_a_year*refinement);
+	// initialize dummy variables
+	double next_price = 0;
+	std::vector<std::vector<double>> price_paths;
+	std::vector<double> pathway;
+
+for (int i = 0; i<number_arrays; i++){
+	pathway.push_back(initial_stock);
+	for (int j = 1; j< array_length*refinement; j++){
+	// take random sample	
+	double	sample = distribution(gen);	
+	next_price = pathway[j-1];
+	next_price = next_price*std::exp( (daily_drift - std::pow(daily_volatility,2)/2) + daily_volatility*sample);
+	pathway.push_back(next_price);
+		
+	}
+price_paths.push_back(pathway);
+pathway.clear();
+	}	
+return price_paths;
+}
+
+
+};
+
+class Vanilla_Option{
+protected:
+	char call_put_flag;
+	double initial_stock;
+	double volatility;
+	double strike_price;
+	int maturity;
+public:
+	Vanilla_Option(char flag , double initial_stock, double volatility, double strike, int days ) : call_put_flag(flag), volatility(volatility), strike_price(strike), maturity(days){
+	if (call_put_flag != 'c' && call_put_flag != 'p'){
+	throw std::invalid_argument("Invalid Call or Put Flag. Input must be character c or p");
 	}
 }
-if (knock_flag == 'i' && direction_flag == 'd'){
-for(int i=0; i<sample_count; i++){
-	double max_price = *std::max_element(simulation_data[i].begin(),simulation_data[i].end());
-	if (max_price < barrier_price){
-		payoff += std::max(simulation_data[i][maturity-1] - strike_price, 0.0);
+	double option_payoff(double final_price){
+		if (call_put_flag == 'c'){
+			return std::max(final_price - strike_price, 0.0);
+		}
+		else {
+			return std::max(strike_price - final_price,0.0);
 		}
 	}
+// add in the pricing feature later, focus on barrier first. 
+
+};
+
+class Barrier_Option : public Vanilla_Option{
+private:
+		double barrier_price;
+		char knock_flag;
+		char direction_flag;
+public:	
+	Barrier_Option(char cp_flag, char inoutflag, char updownflag, double volatility, double strike , double days, double barrier, double initial_stock) : Vanilla_Option(cp_flag,initial_stock,volatility, strike , days ) , barrier_price(barrier), knock_flag(inoutflag), direction_flag(updownflag)  {	
+if (knock_flag != 'o' && call_put_flag != 'i'){
+	throw std::invalid_argument("Invalid Knock Flag. Input must be character o or i");
+	}
+if (direction_flag != 'u' && direction_flag != 'd'){
+	throw std::invalid_argument("Invalid Direction Flag. Input must be character d or u");
+	}
 }
-return payoff/sample_count * std::exp(-risk_free * maturity/real_days_in_a_year);
+
+double barrier_payoff( double maturity_price ,double max_price, double min_price){
+if (knock_flag == 'i'){
+	if (direction_flag == 'u' && max_price < barrier_price){
+	return 0; 
+	}
+	else if (direction_flag == 'd' && min_price > barrier_price){
+	return 0;
+	}
+	else{
+	return option_payoff(maturity_price);
+	}
 }
+else if (knock_flag == 'o'){
+	if (direction_flag == 'u' && max_price < barrier_price){
+	return option_payoff(maturity_price);
+	}
+	else if (direction_flag == 'd' && min_price > barrier_price ){
+	return option_payoff(maturity_price);
+	}
+	else {
+	return 0;
+}
+}
+return 0;
+}
+double barrier_monte_carlo(std::vector<std::vector<double>> paths){
+	double payoff = 0;
+	int total_steps = paths[0].size();
+		for(int i =0 ; i< paths.size(); i++){
+			double max_price = *std::max_element(paths[i].begin(), paths[i].end());
+			double min_price = *std::min_element(paths[i].begin(), paths[i].end());
+			payoff +=barrier_payoff(paths[i][total_steps-1], max_price, min_price );
+		}
+	return payoff;
+	}
+};
+
 int main(){
+int number_samples = 10000;
+double initial_stock = 60;
+double barrier = 70;
+double strike = 50;
+double volatility = 0.3;
+double real_rate = 0.8;
+int days = 365;
+int refinement = 8;
     //std::cout << monte_carlo_bs_call(60, 65, 0.3 ,0.25*days_in_a_year, 0.08 , 10000001) << std::endl;
     //std::cout << monte_carlo_bs_put(60, 65, 0.3 ,0.25*days_in_a_year, 0.08 , 10000001) << std::endl;
-    std::vector<std::vector<double>> paths = monte_carlo_array_generator(10, 10, 0.08, 0.30,60 );
+   /* std::vector<std::vector<double>> paths = monte_carlo_array_generator(10, 10, 0.08, 0.30,60, refinement );
     for (int i=0; i< paths.size(); i++){
 	    std::cout << "Path " << i+1 << ": ";
     for (int j = 0; j<paths[i].size(); j++){
 	    std::cout << paths[i][j] << " ";
     }	    
     std::cout << std::endl;
-    }
-    double  output_in_and_up = call_barrier_monte_carlo('i', 'u', 60, 70, 50, 0.3, 365, 0.08, 10000);
-    std::cout << output_in_and_up << std::endl;
-     double  output_in_and_down = call_barrier_monte_carlo('i', 'd', 60, 70, 50, 0.3, 365, 0.08, 10000);
-    std::cout << output_in_and_down << std::endl;
+    }*/
+Stock_Monte_Carlo data();
+    double  output_in_and_up = call_barrier_monte_carlo('i', 'u', initial_stock, 70, 50, 0.3, days, 0.08, number_samples, refinement);
+    std::cout << "up and in call " << output_in_and_up << std::endl;
+     double  output_in_and_down = call_barrier_monte_carlo('i', 'd', initial_stock, 70, 50, 0.3, days, 0.08, number_samples, refinement);
+    std::cout << "down and in call " <<output_in_and_down << std::endl;
+    double  output_out_and_up = call_barrier_monte_carlo('o', 'u', initial_stock, 70, 50, 0.3, days, 0.08, number_samples, refinement);
+    std::cout << "up and out call: " << output_out_and_up << std::endl;
+     double  output_out_and_down = call_barrier_monte_carlo('o', 'd', initial_stock, 70, 50, 0.3, days, 0.08, number_samples, refinement);
+    std::cout << "down and out call: " <<output_out_and_down << std::endl;
     return 0;
 }
