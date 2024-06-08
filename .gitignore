@@ -24,3 +24,6 @@
 
 #ignore the folder where compiled files are stored
 /build
+
+#misc
+*.swp
