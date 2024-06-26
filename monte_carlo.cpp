@@ -3,6 +3,7 @@
 #include <random>
 #include <cmath>
 #include <vector>
+#include <autodiff/forward/real.hpp>
 
 const double real_days_in_a_year = 365;
 const double volatility_days_in_a_year = 252;
