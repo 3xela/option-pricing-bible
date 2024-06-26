@@ -24,6 +24,8 @@
 
 #ignore the folder where compiled files are stored
 /build
+/data
+/plots
 
 #misc
 *.swp
