@@ -5,7 +5,7 @@
 #include <cmath>
 #include <vector>
 #include <functional>
-#include "autodiff-main/autodiff/forward/dual.hpp"
+#include "include/autodiff-main/autodiff/forward/dual.hpp"
 #include <sstream>
 
 std::random_device rd;
@@ -79,9 +79,8 @@ return 0.5*p*p;
 };
 
 dual likelihood(dual p){
-
-    return p
-}
+    return p;
+};
 
 class StockProcessor {
 public:
@@ -184,4 +183,4 @@ std::cout << "Final position: " << result[0][num_steps-1] << ", Final velocity: 
 std::cout << "HMC result x: " << hmc_result[0] << " HMC result p: " << hmc_result[1]<< std::endl;
 return 0;
 }
-//g++ -Iautodiff-main hamiltonian_mc.cpp -o build/hmc
+//g++ -Iinclude/autodiff-main hamiltonian_mc.cpp -o build/hmc
