@@ -27,6 +27,7 @@
 /data
 /plots
 /include
+.vscode/
 
 #misc
 *.swp
