@@ -26,6 +26,7 @@
 /build
 /data
 /plots
+/include
 
 #misc
 *.swp
